@@ -1,8 +1,10 @@
 import numpy as np
 import scipy.stats as stats
 import pandas as pd
-from sklearn.ensemble import GradientBoostingRegressor
+from keras.layers import Dense
+from keras.models import Sequential
 import matplotlib.pyplot as plt
+from keras.wrappers.scikit_learn import KerasRegressor
 
 df_train = pd.read_csv("train.csv", parse_dates=['timestamp'])
 df_test = pd.read_csv("test.csv", parse_dates=['timestamp'])
@@ -64,14 +66,20 @@ X_test = X_all[num_train:]
 df_columns = df_values.columns
 print df_columns[np.where(np.isinf(col_mean))]
 
-reg = GradientBoostingRegressor(subsample=0.7, max_depth=5, n_estimators=180)
-reg.fit(X_train, y_train)
-print reg.feature_importances_
 
+def base_model():
+    model = Sequential()
+    model.add(Dense(14, input_dim=13, init='normal', activation='relu'))
+    model.add(Dense(7, init='normal', activation='relu'))
+    model.add(Dense(1, init='normal'))
+    model.compile(loss='mean_squared_error', optimizer='adam')
+
+
+reg = KerasRegressor(build_fn=base_model, nb_epoch=100, batch_size=5, verbose=0)
 # plt.barh(np.arange(len(df_columns))*5, reg.feature_importances_, height=3)
 # plt.yticks(np.arange(len(df_columns))*5, df_columns)
 # plt.show()
 
 y_pred = reg.predict(X_test)
 df_sub = pd.DataFrame({'id': id_test, 'price_doc': y_pred})
-df_sub.to_csv('sub_grad2.csv', index=False)
+df_sub.to_csv('sub_nn.csv', index=False)
