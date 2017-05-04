@@ -1,14 +1,14 @@
 import numpy as np
-import scipy.stats as stats
+from sklearn import preprocessing
 import pandas as pd
-from keras.layers import Dense
+from keras.layers import Dense, Dropout
 from keras.models import Sequential
 import matplotlib.pyplot as plt
 from keras.wrappers.scikit_learn import KerasRegressor
 
-df_train = pd.read_csv("train.csv", parse_dates=['timestamp'])
-df_test = pd.read_csv("test.csv", parse_dates=['timestamp'])
-df_macro = pd.read_csv("macro.csv", parse_dates=['timestamp'])
+df_train = pd.read_csv("/input/train.csv", parse_dates=['timestamp'])
+df_test = pd.read_csv("/input/test.csv", parse_dates=['timestamp'])
+df_macro = pd.read_csv("/input/macro.csv", parse_dates=['timestamp'])
 
 df_train.head()
 
@@ -56,7 +56,7 @@ df_values = pd.concat([df_numeric, df_obj], axis=1)
 X_all = df_values.values
 print (X_all.shape)
 
-col_mean = stats.nanmean(X_all, axis=0)
+col_mean = np.nanmean(X_all, axis=0)
 inds = np.where(np.isnan(X_all))
 X_all[inds] = np.take(col_mean, inds[1])
 
@@ -66,20 +66,36 @@ X_test = X_all[num_train:]
 df_columns = df_values.columns
 print df_columns[np.where(np.isinf(col_mean))]
 
+model = Sequential()
+model.add(Dense(190, input_dim=393, init='normal', activation='relu'))
+model.add(Dense(90, init='normal', activation='relu'))
+model.add(Dense(90, init='normal', activation='relu'))
+model.add(Dense(90, init='normal', activation='relu'))
+model.add(Dense(90, init='normal', activation='relu'))
+model.add(Dense(90, init='normal', activation='relu'))
+model.add(Dense(90, init='normal', activation='relu'))
+model.add(Dense(90, init='normal', activation='relu'))
+model.add(Dense(90, init='normal', activation='relu'))
+model.add(Dense(90, init='normal', activation='relu'))
+model.add(Dense(90, init='normal', activation='relu'))
+model.add(Dense(50, init='normal', activation='relu'))
+model.add(Dense(50, init='normal', activation='relu'))
+model.add(Dense(25, init='normal', activation='relu'))
+model.add(Dense(1, init='normal'))
+model.compile(loss='mean_squared_error', optimizer='adam')
 
-def base_model():
-    model = Sequential()
-    model.add(Dense(14, input_dim=13, init='normal', activation='relu'))
-    model.add(Dense(7, init='normal', activation='relu'))
-    model.add(Dense(1, init='normal'))
-    model.compile(loss='mean_squared_error', optimizer='adam')
+y_scale = preprocessing.MinMaxScaler().fit(y_train)
+X_scale = preprocessing.MinMaxScaler().fit(X_all)
+y_scaled = y_scale.transform(y_train)
+print y_scaled
+X_scaled = X_scale.transform(X_train)
+reg = model.fit(X_scaled, y_scaled, nb_epoch=500)
 
-
-reg = KerasRegressor(build_fn=base_model, nb_epoch=100, batch_size=5, verbose=0)
 # plt.barh(np.arange(len(df_columns))*5, reg.feature_importances_, height=3)
 # plt.yticks(np.arange(len(df_columns))*5, df_columns)
 # plt.show()
 
-y_pred = reg.predict(X_test)
+y_pred = y_scale.inverse_transform(np.reshape(model.predict(X_scale.transform(X_test)), (1, -1))[0])
+print y_pred
 df_sub = pd.DataFrame({'id': id_test, 'price_doc': y_pred})
-df_sub.to_csv('sub_nn.csv', index=False)
+df_sub.to_csv('/output/sub_nn.csv', index=False)
