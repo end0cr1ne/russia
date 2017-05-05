@@ -1,12 +1,14 @@
 import numpy as np
 import scipy.stats as stats
 import pandas as pd
+from sklearn import preprocessing
 from sklearn.ensemble import GradientBoostingRegressor
+from sklearn.linear_model import Lasso
 import matplotlib.pyplot as plt
 
-df_train = pd.read_csv("train.csv", parse_dates=['timestamp'])
-df_test = pd.read_csv("test.csv", parse_dates=['timestamp'])
-df_macro = pd.read_csv("macro.csv", parse_dates=['timestamp'])
+df_train = pd.read_csv("input/train.csv", parse_dates=['timestamp'])
+df_test = pd.read_csv("input/test.csv", parse_dates=['timestamp'])
+df_macro = pd.read_csv("input/macro.csv", parse_dates=['timestamp'])
 
 df_train.head()
 
@@ -54,7 +56,7 @@ df_values = pd.concat([df_numeric, df_obj], axis=1)
 X_all = df_values.values
 print (X_all.shape)
 
-col_mean = stats.nanmean(X_all, axis=0)
+col_mean = np.nanmean(X_all, axis=0)
 inds = np.where(np.isnan(X_all))
 X_all[inds] = np.take(col_mean, inds[1])
 
@@ -64,9 +66,9 @@ X_test = X_all[num_train:]
 df_columns = df_values.columns
 print df_columns[np.where(np.isinf(col_mean))]
 
-reg = GradientBoostingRegressor(subsample=0.7, max_depth=5, n_estimators=180)
+reg = Lasso(alpha=0.01, positive=True, tol=0.001, max_iter=10000)
 reg.fit(X_train, y_train)
-print reg.feature_importances_
+# print reg.feature_importances_
 
 # plt.barh(np.arange(len(df_columns))*5, reg.feature_importances_, height=3)
 # plt.yticks(np.arange(len(df_columns))*5, df_columns)
@@ -74,4 +76,4 @@ print reg.feature_importances_
 
 y_pred = reg.predict(X_test)
 df_sub = pd.DataFrame({'id': id_test, 'price_doc': y_pred})
-df_sub.to_csv('sub_grad2.csv', index=False)
+df_sub.to_csv('output/sub_grad3.csv', index=False)
